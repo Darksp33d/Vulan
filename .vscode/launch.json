@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Vulan}/KnightRogue",
+            "name": "Debug KnightRogue (KnightRogue)",
+            "program": "${workspaceFolder:Vulan}/KnightRogue/.build/debug/KnightRogue",
+            "preLaunchTask": "swift: Build Debug KnightRogue (KnightRogue)"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Vulan}/KnightRogue",
+            "name": "Release KnightRogue (KnightRogue)",
+            "program": "${workspaceFolder:Vulan}/KnightRogue/.build/release/KnightRogue",
+            "preLaunchTask": "swift: Build Release KnightRogue (KnightRogue)"
+        }
+    ]
+}

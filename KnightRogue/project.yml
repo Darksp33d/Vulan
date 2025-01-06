@@ -1,0 +1,16 @@
+name: KnightRogue
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: 14.0
+targets:
+  KnightRogue:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/KnightRogue
+      - Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_FILE: Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.KnightRogue
