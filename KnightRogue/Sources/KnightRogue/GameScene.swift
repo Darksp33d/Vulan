@@ -8,9 +8,20 @@ class GameScene: SKScene {
     private var lastUpdateTime: TimeInterval = 0
     private var idleFrames: [SKTexture] = []
     private var walkFrames: [SKTexture] = []
+    private var jumpFrames: [SKTexture] = []
     private var isWalkingRight = false
     private var isWalkingLeft = false
+    private var isJumping = false
     private var movementSpeed: CGFloat = 200.0
+    
+    // Track touches for each button
+    private var leftButtonTouch: UITouch?
+    private var rightButtonTouch: UITouch?
+    private var jumpButtonTouch: UITouch?
+    
+    private var leftButton: SKNode?
+    private var rightButton: SKNode?
+    private var jumpButton: SKNode?
     
     // MARK: - Animation Setup
     func createIdleFrames() {
@@ -43,6 +54,25 @@ class GameScene: SKScene {
         print("Created \(walkFrames.count) walk frames")
     }
     
+    func createJumpFrames() {
+        print("Loading Jump texture...")
+        let texture = SKTexture(imageNamed: "Jump")
+        texture.filteringMode = .nearest
+        let totalFrames = 6
+        
+        // Adjusted padding for jump frames
+        let frameBounds: [(leftPadding: CGFloat, width: CGFloat)] = [
+            (24, 43), // Frame 0
+            (24, 43), // Frame 1
+            (24, 43), // Frame 2
+            (24, 43), // Frame 3
+            (24, 43), // Frame 4
+            (24, 43)  // Frame 5
+        ]
+        jumpFrames = createFrames(from: texture, totalFrames: totalFrames, frameBounds: frameBounds)
+        print("Created \(jumpFrames.count) jump frames")
+    }
+    
     private func createFrames(from texture: SKTexture, totalFrames: Int, frameBounds: [(leftPadding: CGFloat, width: CGFloat)]) -> [SKTexture] {
         return (0..<totalFrames).map { i in
             // Use the same texture instance instead of creating new ones
@@ -64,6 +94,7 @@ class GameScene: SKScene {
     func setupKnight() {
         createIdleFrames()
         createWalkFrames()
+        createJumpFrames()
         
         // Ensure we have valid textures before creating the sprite
         guard !idleFrames.isEmpty else {
@@ -128,6 +159,29 @@ class GameScene: SKScene {
         knight.run(repeatAction, withKey: "animation")
     }
     
+    func startJumpAnimation() {
+        guard let knight = knight else { return }
+        knight.removeAllActions()
+        
+        let animateAction = SKAction.animate(with: jumpFrames,
+                                           timePerFrame: 0.08,
+                                           resize: false,
+                                           restore: true)
+        
+        let completionAction = SKAction.run { [weak self] in
+            guard let self = self else { return }
+            self.isJumping = false
+            if self.isWalkingLeft || self.isWalkingRight {
+                self.startWalkingAnimation(direction: self.isWalkingLeft ? -1 : 1)
+            } else {
+                self.startIdleAnimation()
+            }
+        }
+        
+        let sequence = SKAction.sequence([animateAction, completionAction])
+        knight.run(sequence, withKey: "animation")
+    }
+    
     // MARK: - Level Design
     func createLevel() {
         // Ground
@@ -171,59 +225,64 @@ class GameScene: SKScene {
     }
     
     // MARK: - Input Handling
-    private var leftButton: SKSpriteNode?
-    private var rightButton: SKSpriteNode?
-    private var jumpButton: SKSpriteNode?
-    
     private func setupControls() {
+        // Enable multitouch
+        view?.isMultipleTouchEnabled = true
+        
+        // Create buttons
+        let buttonSize = CGSize(width: 60, height: 60)
+        
         // Left button
-        leftButton = SKSpriteNode(color: .gray.withAlphaComponent(0.5), size: CGSize(width: 60, height: 60))
-        if let leftButton = leftButton {
-            leftButton.position = CGPoint(x: 50, y: 50)
-            leftButton.zPosition = 10
-            leftButton.name = "leftButton"
-            addChild(leftButton)
-        }
+        let leftButton = SKShapeNode(rectOf: buttonSize, cornerRadius: 10)
+        leftButton.fillColor = .gray.withAlphaComponent(0.5)
+        leftButton.strokeColor = .white.withAlphaComponent(0.3)
+        leftButton.position = CGPoint(x: 50, y: 50)
+        leftButton.name = "leftButton"
+        leftButton.zPosition = 10
+        addChild(leftButton)
+        self.leftButton = leftButton
         
         // Right button
-        rightButton = SKSpriteNode(color: .gray.withAlphaComponent(0.5), size: CGSize(width: 60, height: 60))
-        if let rightButton = rightButton {
-            rightButton.position = CGPoint(x: 120, y: 50)
-            rightButton.zPosition = 10
-            rightButton.name = "rightButton"
-            addChild(rightButton)
-        }
+        let rightButton = SKShapeNode(rectOf: buttonSize, cornerRadius: 10)
+        rightButton.fillColor = .gray.withAlphaComponent(0.5)
+        rightButton.strokeColor = .white.withAlphaComponent(0.3)
+        rightButton.position = CGPoint(x: 120, y: 50)
+        rightButton.name = "rightButton"
+        rightButton.zPosition = 10
+        addChild(rightButton)
+        self.rightButton = rightButton
         
         // Jump button
-        jumpButton = SKSpriteNode(color: .gray.withAlphaComponent(0.5), size: CGSize(width: 60, height: 60))
-        if let jumpButton = jumpButton {
-            jumpButton.position = CGPoint(x: size.width - 50, y: 50)
-            jumpButton.zPosition = 10
-            jumpButton.name = "jumpButton"
-            addChild(jumpButton)
-        }
+        let jumpButton = SKShapeNode(rectOf: buttonSize, cornerRadius: 10)
+        jumpButton.fillColor = .gray.withAlphaComponent(0.5)
+        jumpButton.strokeColor = .white.withAlphaComponent(0.3)
+        jumpButton.position = CGPoint(x: size.width - 50, y: 50)
+        jumpButton.name = "jumpButton"
+        jumpButton.zPosition = 10
+        addChild(jumpButton)
+        self.jumpButton = jumpButton
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             let location = touch.location(in: self)
-            let touchedNodes = nodes(at: location)
             
-            for node in touchedNodes {
-                switch node.name {
-                case "leftButton":
-                    isWalkingLeft = true
-                    isWalkingRight = false
+            if leftButton?.contains(location) ?? false {
+                isWalkingLeft = true
+                if !isJumping {
                     startWalkingAnimation(direction: -1)
-                case "rightButton":
-                    isWalkingRight = true
-                    isWalkingLeft = false
-                    startWalkingAnimation(direction: 1)
-                case "jumpButton":
-                    jump()
-                default:
-                    break
                 }
+            }
+            
+            if rightButton?.contains(location) ?? false {
+                isWalkingRight = true
+                if !isJumping {
+                    startWalkingAnimation(direction: 1)
+                }
+            }
+            
+            if jumpButton?.contains(location) ?? false {
+                jump()
             }
         }
     }
@@ -231,21 +290,25 @@ class GameScene: SKScene {
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             let location = touch.location(in: self)
-            let touchedNodes = nodes(at: location)
             
-            for node in touchedNodes {
-                switch node.name {
-                case "leftButton":
-                    isWalkingLeft = false
-                    if !isWalkingRight { startIdleAnimation() }
-                case "rightButton":
-                    isWalkingRight = false
-                    if !isWalkingLeft { startIdleAnimation() }
-                default:
-                    break
+            if leftButton?.contains(location) ?? false {
+                isWalkingLeft = false
+                if !isWalkingRight && !isJumping {
+                    startIdleAnimation()
+                }
+            }
+            
+            if rightButton?.contains(location) ?? false {
+                isWalkingRight = false
+                if !isWalkingLeft && !isJumping {
+                    startIdleAnimation()
                 }
             }
         }
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touchesEnded(touches, with: event)
     }
     
     // MARK: - Game Loop
@@ -261,31 +324,40 @@ class GameScene: SKScene {
     func jump() {
         guard let knight = knight,
               let physics = knight.physicsBody,
-              physics.velocity.dy < 0.1 && physics.velocity.dy > -0.1 else { return }
+              (isWalkingLeft || isWalkingRight), // Only jump if moving
+              !isJumping, // Prevent double jumping
+              abs(physics.velocity.dy) < 1.0 else { return }
         
-        knight.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 25))
+        isJumping = true
+        physics.applyImpulse(CGVector(dx: 0, dy: 400))
+        startJumpAnimation()
+        print("Jump applied with velocity: \(physics.velocity)")
     }
     
     override func update(_ currentTime: TimeInterval) {
         if lastUpdateTime == 0 {
             lastUpdateTime = currentTime
+            return
         }
         
-        let dt = currentTime - lastUpdateTime
-        
-        // Update character movement
-        if let knight = knight {
-            var velocityX: CGFloat = 0
-            
-            if isWalkingLeft {
-                velocityX = -movementSpeed
-            } else if isWalkingRight {
-                velocityX = movementSpeed
-            }
-            
-            knight.physicsBody?.velocity.dx = velocityX
-        }
-        
+        let deltaTime = currentTime - lastUpdateTime
         lastUpdateTime = currentTime
+        
+        guard let knight = knight else { return }
+        
+        // Apply horizontal movement even during jumps
+        var dx: CGFloat = 0
+        if isWalkingRight {
+            dx = movementSpeed
+        } else if isWalkingLeft {
+            dx = -movementSpeed
+        }
+        
+        if dx != 0 {
+            knight.physicsBody?.velocity.dx = dx
+        } else {
+            // Slow down horizontal movement when not pressing buttons
+            knight.physicsBody?.velocity.dx *= 0.9
+        }
     }
 }
