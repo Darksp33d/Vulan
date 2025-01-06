@@ -10,7 +10,7 @@ class GameScene: SKScene {
     private var walkFrames: [SKTexture] = []
     private var isWalkingRight = false
     private var isWalkingLeft = false
-    private var movementSpeed: CGFloat = 100.0
+    private var movementSpeed: CGFloat = 200.0
     
     // MARK: - Animation Setup
     func createIdleFrames() {
@@ -120,7 +120,7 @@ class GameScene: SKScene {
         knight.xScale = direction // Flip sprite based on direction
         
         let animateAction = SKAction.animate(with: walkFrames,
-                                           timePerFrame: 0.1,
+                                           timePerFrame: 0.07,
                                            resize: false,
                                            restore: true)
         
